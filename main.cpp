@@ -54,12 +54,33 @@
 
 #include <typeinfo>
 
+#include <list>
+
 using namespace std;
+
+int pid_index = 0;
 
 struct Befehle{
     vector<string> aCommands;
     vector<string> aValues;
 };
+
+class Process{
+public:
+    Process(int v, int w, Befehle b) 
+        :pid(v), pc(w), befehle(b){
+         blocked = false;
+    }
+
+    int pid;    //process ID
+    int pc;     // program counter
+    bool blocked;
+    Befehle befehle;
+};
+
+list <Process> process_list;
+list <Process> ready_queue;
+list <Process> block_queue;
 
 void handler(int x) 
 
@@ -89,15 +110,21 @@ Befehle readFile(string filename){
     return Befehle;
 }
 
-void simulateProcess(string filename)
-{
+void init(){
     Befehle befehle;
+    befehle = readFile("init.txt");
+    Process p(pid_index, 0, befehle);
+    process_list.push_back(p);
+    ready_queue.push_back(p);
+
+    simulateProcess(p);
+}
+
+void simulateProcess(Process p)
+{
+    Befehle b = p.befehle;
     bool debug = true;
-    bool blocked = false;
-    int pc_counter = 0;
-    int integer = 0;
-    
-    befehle = readFile(filename);
+    int pc_counter = p.pc;
     
     for(int i = 0; i < befehle.aCommands.size(); ++i)
     {
@@ -114,25 +141,39 @@ void simulateProcess(string filename)
         {
             case 'S':
                 integer = Zahl;
+                cout << "Process: " << p.pid << "Zahl=" << integer;
                 break;
             case 'A':
                 integer = integer+Zahl;
+                cout << "Process: " << p.pid << "Zahl=" << integer;
                 break;
             case 'D':
                 integer = integer-Zahl;
+                cout << "Process: " << p.pid << "Zahl=" << integer;
                 break;
             case 'B':
-                blocked = true;
+                p.blocked = true;
+                // push process to blocked process list
+                block_queue.push_back(p);
+                // remove process from ready process list
+                for (std::list<Process>::iterator i = ready_queue.begin(), e = ready_queue.end(); i != e; )
+                {
+                    if (*i == p)
+                       i = ready_queue.erase(i);
+                    else
+                       ++i;
+                }
+                // Call first process in ready list
+                simulateProcess(ready_queue.front());
                 break;
             case 'E':
                 i = befehle.aCommands.size();
                 break;
             case 'R':
-                //Befehle befehleOld = befehle;
-                //int oldPc = i;
-                blocked = true;
-                simulateProcess(befehle.aValues.at(i)); 
-                blocked = false;
+                Befehle befehle;
+                befehle = readFile(befehle.aValues.at(i));
+                Process pNew(pid_index+1, 0, befehle);
+                process_list.push_back(pNew);
                 break;
             default:
                 printf("Wrong command");
@@ -200,7 +241,7 @@ int main(int argc, char** argv)
 
 
 
-            cout << "$ ";
+        cout << "$ ";
 
             cin.getline(buffer,600,'\n');
 
@@ -287,6 +328,8 @@ int main(int argc, char** argv)
                         exit (EXIT_FAILURE);
 
                     }
+
+                    init();
 
                 }
 
