@@ -59,6 +59,7 @@
 using namespace std;
 
 int pid_index = 0;
+int takt = -1;
 
 struct Befehle{
     vector<string> aCommands;
@@ -67,14 +68,18 @@ struct Befehle{
 
 class Process{
 public:
-    Process(int v, int w, Befehle b) 
-        :pid(v), pc(w), befehle(b){
+    Process(int v, int w, int x, Befehle b) 
+        :pid(v), pc(w), ppid(x), befehle(b){
          blocked = false;
+         start = takt;
     }
 
-    int pid;    //process ID
+    int pid;
+    int ppid;    //process ID
     int pc;     // program counter
     bool blocked;
+    int start;
+    int total;
     Befehle befehle;
 };
 
@@ -94,7 +99,7 @@ void handler(int x)
 
 Befehle readFile(string filename){
     string str1, str2;
-    
+    Befehle befehle;
     ifstream inFile(filename);
     istream_iterator<string> ii(inFile);
     istream_iterator<string> eos;
@@ -104,20 +109,10 @@ Befehle readFile(string filename){
         str1 = *ii; ++ii;
         str2 = *ii; ++ii;
                     
-        Befehle.aCommands.push_back(str1);
-        Befehle.aValues.push_back(str2);
+        befehle.aCommands.push_back(str1);
+        befehle.aValues.push_back(str2);
     }
-    return Befehle;
-}
-
-void init(){
-    Befehle befehle;
-    befehle = readFile("init.txt");
-    Process p(pid_index, 0, befehle);
-    process_list.push_back(p);
-    ready_queue.push_back(p);
-
-    simulateProcess(p);
+    return befehle;
 }
 
 void simulateProcess(Process p)
@@ -126,15 +121,18 @@ void simulateProcess(Process p)
     bool debug = true;
     int pc_counter = p.pc;
     
-    for(int i = 0; i < befehle.aCommands.size(); ++i)
+    for(int i = 0; i < b.aCommands.size(); ++i)
     {
+        takt = takt +1;
         char B;
-        int Zahl;
-        B = befehle.aCommands.at(i);
+        int Zahl, integer;
+        B = b.aCommands.at(i).at(0);
+        string temp;
         
-        if(typeid(befehle.aValues.at(i)) == typeid(int))
+        if(typeid(b.aValues.at(i)) == typeid(int))
         {
-            Zahl = stoi(befehle.aValues.at(i));
+            temp = b.aValues[i];
+            Zahl = stoi(temp);
         }
         
         switch(B)
@@ -156,24 +154,25 @@ void simulateProcess(Process p)
                 // push process to blocked process list
                 block_queue.push_back(p);
                 // remove process from ready process list
-                for (std::list<Process>::iterator i = ready_queue.begin(), e = ready_queue.end(); i != e; )
+                for (std::list<Process>::iterator it = ready_queue.begin(), e = ready_queue.end(); i != e; )
                 {
-                    if (*i == p)
-                       i = ready_queue.erase(i);
+                    if (*it == p)
+                       it = ready_queue.erase(it);
                     else
-                       ++i;
+                       ++it;
                 }
                 // Call first process in ready list
                 simulateProcess(ready_queue.front());
                 break;
             case 'E':
-                i = befehle.aCommands.size();
+                i = b.aCommands.size();
                 break;
             case 'R':
-                Befehle befehle;
-                befehle = readFile(befehle.aValues.at(i));
-                Process pNew(pid_index+1, 0, befehle);
+                Befehle befehleNew;
+                befehleNew = readFile(b.aValues.at(i));
+                Process pNew(pid_index+1, 0,p.pid, befehleNew);
                 process_list.push_back(pNew);
+                ready_queue.push_back(pNew);
                 break;
             default:
                 printf("Wrong command");
@@ -182,6 +181,16 @@ void simulateProcess(Process p)
     }
     
     
+}
+
+void init(){
+    Befehle befehle;
+    befehle = readFile("init.txt");
+    Process p(pid_index, 0,0, befehle);
+    process_list.push_back(p);
+    ready_queue.push_back(p);
+
+    simulateProcess(p);
 }
 
 int main(int argc, char** argv) 
@@ -296,7 +305,7 @@ int main(int argc, char** argv)
             else if(str == "Report")
 
             {
-
+                init();
                 if((pid2 = fork()) < 0)
 
                 {
@@ -328,8 +337,6 @@ int main(int argc, char** argv)
                         exit (EXIT_FAILURE);
 
                     }
-
-                    init();
 
                 }
 
