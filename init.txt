@@ -1,9 +1,0 @@
-S 0
-A 2
-R file_a
-B 
-R file_b
-D 20
-B
-R file_c
-E

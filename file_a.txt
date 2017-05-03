@@ -1,7 +1,0 @@
-S 9
-A 3
-D 5
-R file_b
-B
-A 10
-E 
