@@ -1,25 +1,16 @@
 /*
-
  * To change this license header, choose License Headers in Project Properties.
-
  * To change this template file, choose Tools | Templates
-
  * and open the template in the editor.
-
  */
 
 
 
 /* 
-
  * File:   main.cpp
-
  * Author: Marcel Obel
-
  *
-
  * Created on 21. April 2017, 15:42
-
  */
 
 
@@ -123,6 +114,10 @@ void simulateProcess(Process p)
     
     for(int i = 0; i < b.aCommands.size(); ++i)
     {
+        if(p.blocked == true){
+            simulateProcess(ready_queue.front());
+            continue;
+        }
         takt = takt +1;
         char B;
         int Zahl, integer;
@@ -154,13 +149,8 @@ void simulateProcess(Process p)
                 // push process to blocked process list
                 block_queue.push_back(p);
                 // remove process from ready process list
-                for (std::list<Process>::iterator it = ready_queue.begin(), e = ready_queue.end(); i != e; )
-                {
-                    if (*it == p)
-                       it = ready_queue.erase(it);
-                    else
-                       ++it;
-                }
+
+//                ready_queue.remove(p);
                 // Call first process in ready list
                 simulateProcess(ready_queue.front());
                 break;
@@ -175,7 +165,7 @@ void simulateProcess(Process p)
                 ready_queue.push_back(pNew);
                 break;
             default:
-                printf("Wrong command");
+                cout << "Wrong Command" << endl;
                 break;
         }
     }
@@ -369,83 +359,43 @@ int main(int argc, char** argv)
 
 
 /*
-
  * FCFS-Algorithmus
-
  * 
-
  * int n, j, i;
-
  * int bt[20], wt[20], tat[20], avwt = 0, avtat = 0;
-
     cout << "Enter total number of processes(maximum 20):" << endl;
-
     cin >> n;
-
  
-
     cout << "\nEnter Process Burst Time\n";
-
     for(i = 0; i < n; i++)
-
     {
-
         cout << "P[" << i+1 << "]:";
-
         cin >> bt[i];
-
     }
-
  
-
     wt[0] = 0;    //waiting time for first process is 0
-
  
-
     //calculating waiting time
-
     for(i = 1; i < n;i++)
-
     {
-
         wt[i] = 0;
-
         for(j = 0; j < i; j++)
-
             wt[i] += bt[j];
-
     }
-
  
-
     cout << "\nProcess\t\tBurst Time\tWaiting Time\tTurnaround Time";
-
  
-
     //calculating turnaround time
-
     for(i = 0; i < n; i++)
-
     {
-
         tat[i] = bt[i] + wt[i];
-
         avwt += wt[i];
-
         avtat += tat[i];
-
         cout << "\nP[" << i+1 << "]" << "\t\t" << bt[i] << "\t\t" << wt[i] << "\t\t" << tat[i];
-
     }
-
  
-
     avwt/ = i;
-
     avtat/ = i;
-
     cout << "\n\nAverage Waiting Time:" << avwt;
-
     cout << "\nAverage Turnaround Time:" << avtat;
-
  */
