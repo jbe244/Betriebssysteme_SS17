@@ -14,37 +14,21 @@
  */
 
 
-
 #include <cstdlib>
-
 #include <unistd.h>
-
 #include <sys/wait.h>
-
 #include <stdio.h>
-
 #include <sys/types.h>
-
 #include <fcntl.h>
-
 #include <stdlib.h>
-
 #include <string.h>
-
 #include <iostream>
-
 #include <cstring>
-
 #include <limits.h>
-
 #include <fstream>
-
 #include <iterator>
-
 #include <vector>
-
 #include <typeinfo>
-
 #include <list>
 
 using namespace std;
@@ -74,9 +58,9 @@ public:
     Befehle befehle;
 };
 
-list <Process> process_list;
-list <Process> ready_queue;
-list <Process> block_queue;
+vector<Process> processes_vector;
+vector<Process> ready_processes;
+vector<Process> blocked_processes;
 
 void handler(int x) 
 
@@ -115,7 +99,7 @@ void simulateProcess(Process p)
     for(int i = 0; i < b.aCommands.size(); ++i)
     {
         if(p.blocked == true){
-            simulateProcess(ready_queue.front());
+            simulateProcess(ready_processes.front());
             continue;
         }
         takt = takt +1;
@@ -133,52 +117,71 @@ void simulateProcess(Process p)
         switch(B)
         {
             case 'S':
+            {
                 integer = Zahl;
                 cout << "Process: " << p.pid << "Zahl=" << integer;
                 break;
+            }
             case 'A':
+            {
                 integer = integer+Zahl;
                 cout << "Process: " << p.pid << "Zahl=" << integer;
                 break;
+            }
             case 'D':
+            {
                 integer = integer-Zahl;
                 cout << "Process: " << p.pid << "Zahl=" << integer;
                 break;
+            }
             case 'B':
+            {
                 p.blocked = true;
                 // push process to blocked process list
-                block_queue.push_back(p);
+                blocked_processes.push_back(p);
                 // remove process from ready process list
-
-//                ready_queue.remove(p);
+                
+                for(int i = 0; i < ready_processes.size(); ++i)
+                {
+                    if(ready_processes.at(i).pid == p.pid)
+                    {
+                        ready_processes.erase(ready_processes.begin() + i);
+                    }
+                };
                 // Call first process in ready list
-                simulateProcess(ready_queue.front());
+                simulateProcess(ready_processes.front());
                 break;
+            }
             case 'E':
+            {
                 i = b.aCommands.size();
                 break;
+            }
             case 'R':
+            {
                 Befehle befehleNew;
                 befehleNew = readFile(b.aValues.at(i));
                 Process pNew(pid_index+1, 0,p.pid, befehleNew);
-                process_list.push_back(pNew);
-                ready_queue.push_back(pNew);
+                processes_vector.push_back(pNew);
+                ready_processes.push_back(pNew);
                 break;
+            }
             default:
+            {
                 cout << "Wrong Command" << endl;
                 break;
+            }
         }
     }
-    
-    
 }
 
-void init(){
+void init()
+{
     Befehle befehle;
     befehle = readFile("init.txt");
     Process p(pid_index, 0,0, befehle);
-    process_list.push_back(p);
-    ready_queue.push_back(p);
+    processes_vector.push_back(p);
+    ready_processes.push_back(p);
 
     simulateProcess(p);
 }
@@ -186,174 +189,84 @@ void init(){
 int main(int argc, char** argv) 
 
 {
-
     int n;
-
     int pipefd[2];
-
     pid_t pid, pid2;
-
     char buffer[600] = "";
-
-  
-    
     
     while(true)
-
     {
-
-    
-
         signal(SIGINT, handler);
-
-
-
         if (pipe(pipefd) < 0)   //Pipe erstellen
-
         {
-
             perror ("pipe-error");
-
             exit (EXIT_FAILURE);
-
         }
-
-
-
-
 
         if((pid = fork()) < 0)  //forken
-
         {
-
             perror ("fork-error");
-
             exit (EXIT_FAILURE);
-
         }
-
         else if(pid > 0)    //Kommandant (Parent-Prozess)
-
         {
-
             close(pipefd[0]);    //Leseseite schließen
 
-
-
-        cout << "$ ";
-
+            cout << "$ ";
             cin.getline(buffer,600,'\n');
-
-
-
             write(pipefd[1],buffer, sizeof(buffer) - 1);    //in die Pipe schreiben
-
             memset(buffer,'\0',600);    //Array leeren
 
-            
-
             if((waitpid(pid,0,0)) < 0)   //Auf Child-Prozess warten
-
             {
-
                 perror("waitpid-error");
-
                 exit (EXIT_FAILURE);
-
             }
-
         }
-
         else    //Prozessmanager (Child-Prozess) erstellt die Reporter-Prozesse
-
         {
-
             close(pipefd[1]);    //Schreibseite schließen
 
             n = read(pipefd[0], buffer, sizeof(buffer) - 1);    //aus der Pipe lesen
-
-
-
             //umwandlung in string zur Überprüfung ob Befehl oder nicht
-
             string str(buffer);
-
             if(str == "Quit") 
-
             {
-
                 cout << "Shell wird beendet" << endl;   //Alle Prozesse killen?
-
                 kill(getppid(),SIGKILL);  
-
                 kill(getpid(),SIGKILL);
-
                 exit (EXIT_SUCCESS);
-
             }
-
             else if(str == "Report")
-
             {
                 init();
                 if((pid2 = fork()) < 0)
-
                 {
-
                     cout << "fork-error-child2" << endl;
-
                     exit (EXIT_FAILURE);
-
                 }
-
                 else if(pid2 == 0)  //Reporter-Prozess
-
                 {
-
-                    
-
                 }
-
                 else    //Prozessmanager
-
                 {
-
                     if((waitpid(pid,0,0)) < 0)   //Auf Reporter-Prozess warten
-
                     {
-
                         perror("waitpid-error2");
-
                         exit (EXIT_FAILURE);
-
                     }
-
                 }
-
             }
-
             else
-
             {
-
                 write(STDOUT_FILENO, buffer, n);   //auf Konsole ausgeben
-
                 n = 0;
-
                 cout << endl;
-
                 exit (EXIT_SUCCESS);   
-
             }
-
         }
-
     }
-
-
-
     return 0;
-
 }
 
 
