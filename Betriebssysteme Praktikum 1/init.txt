@@ -1,0 +1,10 @@
+S 0
+A 2
+R process1
+A 60
+B
+R process2
+D 20
+B
+R process3
+E
