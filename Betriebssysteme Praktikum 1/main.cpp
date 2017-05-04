@@ -95,6 +95,7 @@ void simulateProcess(Process p)
     Befehle b = p.befehle;
     bool debug = true;
     int pc_counter = p.pc;
+    int integer=0;
     
     for(int i = 0; i < b.aCommands.size(); ++i)
     {
@@ -104,7 +105,7 @@ void simulateProcess(Process p)
         }
         takt = takt +1;
         char B;
-        int Zahl, integer;
+        int Zahl;
         B = b.aCommands.at(i).at(0);
         string temp;
         
