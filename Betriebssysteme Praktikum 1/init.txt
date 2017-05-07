@@ -1,7 +1,7 @@
 S 0
 A 2
 R process1
-A 60
+A 6
 B
 R process2
 D 20

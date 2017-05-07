@@ -15,6 +15,7 @@
 
 
 #include <cstdlib>
+#include <ctype.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <stdio.h>
@@ -27,6 +28,7 @@
 #include <limits.h>
 #include <fstream>
 #include <iterator>
+#include <iomanip>
 #include <vector>
 #include <typeinfo>
 #include <list>
@@ -44,7 +46,14 @@ struct Befehle {
 
 class Process {
 public:
-
+    
+ int getPPID(){return ppid;}
+    int getPID(){return pid;}
+    int getPC(){return pc;}
+    bool getSTATUS(){return blocked;}
+    int getSTART(){return start;}
+    int getTOTAL(){return total;}
+    int getVALUE(){return value;}
     Process(int v, int w, int x, Befehle b)
     : pid(v), pc(w), ppid(x), befehle(b) {
         blocked = false;
@@ -58,6 +67,7 @@ public:
     int start;
     int total;
     Befehle befehle;
+    int value;
 };
 
 vector<Process> processes_vector;
@@ -100,7 +110,7 @@ void simulateProcess(Process p) {                                       //simula
    
     for (int i = 0; i < b.aCommands.size(); ++i) {
         
-        if (p.blocked == true) {                                      //möglichst anders als funktion schreiben (beispiel "getstatus()")
+        if (p.getSTATUS() == true) {                                      //möglichst anders als funktion schreiben (beispiel "getstatus()")
             simulateProcess(ready_processes.front());
             continue;
         }
@@ -109,30 +119,38 @@ void simulateProcess(Process p) {                                       //simula
         int Zahl;
         B = b.aCommands.at(i).at(0);
         string temp;
-
-        if (typeid (b.aValues.at(i)) == typeid (int)) {
-            temp = b.aValues[i];
+        temp = b.aValues[i];
+        
+      
+        
+        if(isdigit(temp[0])){
+            
+         
             Zahl = stoi(temp);  //Wert direkt aus inputstream als int abspeichern
         }
+       
 
         switch (B) {
         
             case 'S':
             {
+                cout<<"Initiere "<<Zahl;
                 integer = Zahl;
-                cout << "S Process: " << p.pid << "gesetzte Zahl= " << integer;
+                cout << "S Process: " << p.pid << " gesetzte Zahl= " << integer;
                 break;
             }
             case 'A':
             {
+                cout<<"Addiere "<<Zahl<<endl;
                 integer = integer + Zahl;
-                cout << "A Process: " << p.pid << "addierte Zahl= " << integer;
+                cout << "A Process: " << p.pid << " addierte Zahl= " << integer;
                 break;
             }
             case 'D':
             {
+                cout<<"Subtrahiere "<<Zahl;
                 integer = integer - Zahl;
-                cout << "D Process: " << p.pid << "subtrahierte Zahl= " << integer;
+                cout << "D Process: " << p.pid << " subtrahierte Zahl= " << integer;
                 break;
             }
             case 'B':
@@ -160,7 +178,7 @@ void simulateProcess(Process p) {                                       //simula
             }
             case 'R':
             {
-                cout << "R";
+                cout << "R "<<temp;
                 Befehle befehleNew;
                 befehleNew = readFile(b.aValues.at(i));
                 Process pNew(pid_index + 1, 0, p.pid, befehleNew);
@@ -188,13 +206,49 @@ void init() {
     simulateProcess(p);
 }
 
+void print(Process p)
+{
+   
+    cout<<"**********************************************"<<endl
+           <<"The current System state is as follows:"<<endl
+           <<"************************************************"<<endl
+           <<"Current Time: "<<takt<<endl
+           <<"Running Process: "<<endl
+           <<"pid "<<setw(15)<<"ppid" <<setw(15) <<"priority"<<setw(15)<<"value"<<setw(15)<<"start time"<<setw(30)<<"CPU time used so far"<<endl
+      
+
+           <<p.getPID() <<setw(15)<<p.getPPID()<<setw(15)<< "0"<<setw(15)<< "???"<<setw(15)<< p.getSTART()<<setw(30)<< p.getTOTAL()<<endl
+           <<endl
+           <<"Blocked Processes:"<<endl
+           <<"pid "<<setw(15)<<"ppid" <<setw(15) <<"priority"<<setw(15)<<"value"<<setw(15)<<"start time"<<setw(30)<<"CPU time used so far"<<endl;
+           for (int i = 0; i < blocked_processes.size(); i++) {
+             cout<< blocked_processes[i].getPID()<<setw(15)<<blocked_processes[i].getPPID()<<setw(15)<<"0"<<setw(15)<<blocked_processes[i].getVALUE()<<setw(15)<<blocked_processes[i].getSTART()<<setw(30)<<blocked_processes[i].getTOTAL()<<endl;
+  
+             //hier müssen noch die values der blockierten Prozesse rein
+  
+           }
+
+         
+         cout  <<endl
+           <<"Processes Ready to Execute:"<<endl
+           <<"pid "<<setw(15)<<"ppid" <<setw(15) <<"priority"<<setw(15)<<"value"<<setw(15)<<"start time"<<setw(30)<<"CPU time used so far"<<endl;
+        for (int i = 0; i < ready_processes.size(); i++) {
+             cout<< ready_processes[i].getPID()<<setw(15)<<ready_processes[i].getPPID()<<setw(15)<<"0"<<setw(15)<<ready_processes[i].getVALUE()<<setw(15)<<ready_processes[i].getSTART()<<setw(30)<<ready_processes[i].getTOTAL()-1100<<endl;
+//hier müssen noch die Values der starbereiten Prozesse rein
+    }
+            
+         cout<<"************************************************"<<endl;
+
+           
+}
+
 int main(int argc, char** argv)
  {
     int n;
     int pipefd[2];
     pid_t pid, pid2;
     char buffer[600] = "";
-    
+    int zaehler=0;
     init();
    
 
@@ -216,22 +270,23 @@ int main(int argc, char** argv)
 
 
         while (true) {
-
-
+            cout<<"Zähler: "<<zaehler<<endl;
+                    
+            zaehler++;
             cout << "$ ";
             cin.getline(buffer, 600, '\n');
             write(pipefd[1], buffer, sizeof (buffer) - 1); //in die Pipe schreiben
             string str(buffer);
-//            memset(buffer, '\0', 600); //Array leeren
+            memset(buffer, '\0', 600); //Array leeren
 
-//            if ((waitpid(pid, 0, 0)) < 0) //Auf Child-Prozess warten
-//            {
-//                perror("waitpid-error");
-//                exit(EXIT_FAILURE);
-//            }
+            if ((waitpid(pid, 0, 0)) < 0) //Auf Child-Prozess warten
+            {
+                perror("waitpid-error");
+                exit(EXIT_FAILURE);
+            }
 
           
-            if (str == "Quit") {
+            if (str == "Quit"||str=="quit") {
                 cout << "Shell wird beendet" << endl; //Alle Prozesse killen?
 //                kill(getppid(), SIGKILL);
 //                kill(getpid(), SIGKILL);
@@ -253,8 +308,8 @@ int main(int argc, char** argv)
                                                                         // über funktion realisieren?
             }
         
-        if (str == "Report") {
-
+        if (str == "Report" || str =="report") {
+            print(processes_vector.at(pid));
             if ((pid2 = fork()) < 0) {
                 cout << "fork-error-child2" << endl;
                 exit(EXIT_FAILURE);
@@ -265,11 +320,12 @@ int main(int argc, char** argv)
             {
                 if ((waitpid(pid, 0, 0)) < 0) //Auf Reporter-Prozess warten
                 {
-                    perror("waitpid-error2");
-                    exit(EXIT_FAILURE);
+//                    perror("waitpid-error2");
+//                    exit(EXIT_FAILURE);
                 }
             }
-        } else {
+        } 
+        else {
             write(STDOUT_FILENO, buffer, n); //auf Konsole ausgeben
             n = 0;
             cout << endl;
