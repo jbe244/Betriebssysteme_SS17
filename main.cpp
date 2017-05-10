@@ -30,25 +30,38 @@
 #include <vector>
 #include <typeinfo>
 #include <list>
+#include <iomanip>
 
 using namespace std;
 
 int pid_index = 0;
 int takt = -1;
+bool mode=false;
 
 struct Befehle{
     vector<string> aCommands;
     vector<string> aValues;
 };
 
-class Process{
+class Process
+{
 public:
     Process(int v, int w, int x, Befehle b) 
         :pid(v), pc(w), ppid(x), befehle(b){
          blocked = false;
          start = takt;
     }
-
+    int getPPID(){return ppid;}
+    int getPID(){return pid;}
+    int getPC(){return pc;}
+    bool getSTATUS(){return blocked;}
+    void setSTATUS(bool s){blocked=s;};
+    int getSTART(){return start;}
+    int getTOTAL(){return total;}
+    int getVALUE(){return value;}
+    void setValue(int val){value=val;};
+    
+    int value=0;    
     int pid;
     int ppid;    //process ID
     int pc;     // program counter
@@ -61,6 +74,10 @@ public:
 vector<Process> processes_vector;
 vector<Process> ready_processes;
 vector<Process> blocked_processes;
+
+Befehle bRunning;
+
+Process running(0,0,0,bRunning);
 
 void handler(int x) 
 
@@ -92,11 +109,21 @@ Befehle readFile(string filename){
 
 void simulateProcess(Process p)
 {
+    running = p;
+    
+    for(int i = 0; i < ready_processes.size(); ++i)
+    {
+        if(ready_processes.at(i).pid == p.pid)
+        {
+            ready_processes.erase(ready_processes.begin() + i);
+        }
+    };
+    
     Befehle b = p.befehle;
     bool debug = true;
     int pc_counter = p.pc;
     
-    for(int i = 0; i < b.aCommands.size(); ++i)
+    for(int i = pc_counter; i < b.aCommands.size(); ++i)
     {
         if(p.blocked == true){
             simulateProcess(ready_processes.front());
@@ -119,19 +146,22 @@ void simulateProcess(Process p)
             case 'S':
             {
                 integer = Zahl;
-                cout << "Process: " << p.pid << "Zahl=" << integer;
+                cout << "Process: " << p.pid << "Zahl= " << integer <<endl;
+                p.setValue(integer);
                 break;
             }
             case 'A':
             {
                 integer = integer+Zahl;
-                cout << "Process: " << p.pid << "Zahl=" << integer;
+                cout << "Process: " << p.pid << "Zahl= " << integer<<endl;
+                p.setValue(integer);
                 break;
             }
             case 'D':
             {
                 integer = integer-Zahl;
-                cout << "Process: " << p.pid << "Zahl=" << integer;
+                cout << "Process: " << p.pid << "Zahl= " << integer<<endl;
+                p.setValue(integer);
                 break;
             }
             case 'B':
@@ -175,24 +205,69 @@ void simulateProcess(Process p)
     }
 }
 
+void print(Process p)
+{
+    
+    cout<<"Processes_vector.size = "<<processes_vector.size()<<endl;
+ cout<<"Startbereite Prozesse: "<<ready_processes.size()<<endl;
+  cout<<"Insgesammte Prozesse: "<<processes_vector.size()<<endl;
+   cout<<"Blockierte Prozesse: "<<blocked_processes.size()<<endl;
+   
+    cout<<"**********************************************"<<endl
+           <<"The current System state is as follows:"<<endl
+           <<"************************************************"<<endl
+           <<"Current Time: "<<takt<<endl
+           <<"Running Process: "<<endl
+           <<"pid "<<setw(15)<<"ppid" <<setw(15) <<"priority"<<setw(15)<<"value"<<setw(15)<<"start time"<<setw(30)<<"CPU time used so far"<<endl
+   
+      
+
+           <<p.getPID() <<setw(15)<<p.getPPID()<<setw(15)<< "0"<<setw(15)<< p.getVALUE()<<setw(15)<< p.getSTART()<<setw(30)<< p.getTOTAL()<<endl
+           <<endl
+           <<"Blocked Processes:"<<endl
+           <<"pid "<<setw(15)<<"ppid" <<setw(15) <<"priority"<<setw(15)<<"value"<<setw(15)<<"start time"<<setw(30)<<"CPU time used so far"<<endl;
+           for (int i = 0; i < blocked_processes.size(); i++)
+           {
+             cout<< blocked_processes[i].getPID()<<setw(15)<<blocked_processes[i].getPPID()<<setw(15)<<"0"<<setw(15)<<blocked_processes[i].getVALUE()<<setw(15)<<blocked_processes[i].getSTART()<<setw(30)<<blocked_processes[i].getTOTAL()<<endl;
+  
+             //hier müssen noch die values der blockierten Prozesse rein
+  
+           }
+
+         
+         cout  <<endl
+           <<"Processes Ready to Execute:"<<endl
+           <<"pid "<<setw(15)<<"ppid" <<setw(15) <<"priority"<<setw(15)<<"value"<<setw(15)<<"start time"<<setw(30)<<"CPU time used so far"<<endl;
+        
+        for (int i = 0; i < ready_processes.size(); i++)
+        {
+            cout<< ready_processes[i].getPID() << setw(15)<<ready_processes[i].getPPID()<<setw(15)<<"0"<<setw(15)<<ready_processes[i].getVALUE()<<setw(15)<<ready_processes[i].getSTART()<<setw(30)<<ready_processes[i].getTOTAL()-1100<<endl;
+//hier müssen noch die Values der starbereiten Prozesse rein
+        }
+            
+         cout<<"************************************************"<<endl;
+
+           
+}
+
 void init()
 {
     Befehle befehle;
     befehle = readFile("init.txt");
     Process p(pid_index, 0,0, befehle);
     processes_vector.push_back(p);
-    ready_processes.push_back(p);
+    //ready_processes.push_back(p);
 
     simulateProcess(p);
 }
 
 int main(int argc, char** argv) 
-
 {
     int n;
     int pipefd[2];
     pid_t pid, pid2;
     char buffer[600] = "";
+    init();
     
     while(true)
     {
@@ -233,9 +308,7 @@ int main(int argc, char** argv)
             if(str == "Quit") 
             {
                 cout << "Shell wird beendet" << endl;   //Alle Prozesse killen?
-                kill(getppid(),SIGKILL);  
-                kill(getpid(),SIGKILL);
-                exit (EXIT_SUCCESS);
+                goto breakShell;
             }
             else if(str == "Report")
             {
@@ -257,6 +330,54 @@ int main(int argc, char** argv)
                     }
                 }
             }
+            else  if (str == "Print" || str =="print"|| str =="P"|| str =="p") {
+          
+                if ((pid2 = fork()) < 0) 
+                {
+                    cout << "fork-error-child2" << endl;
+                    exit(EXIT_FAILURE);
+                } 
+                else if (pid2 == 0) //Reporter-Prozess
+                {
+                    cout << "Report-child" << endl;
+                    print(running);
+                }
+            }
+            else if (str == "Mode" || str =="mode"|| str =="M"|| str =="m") 
+            {
+                cout<<"Umschalten zwischen Debug- und Automatic Mode"<<endl;
+                if(mode==true)
+                {
+                    mode=false;                     //true = automatisch, false =debug
+                }
+                else
+                {
+                    mode=true;
+                }
+            }
+            else if (str=="Unblock"|| str=="unblock"|| str=="u" || str=="U")
+            {
+                cout<<"Blockierte Prozesse: "<<blocked_processes.size()<<endl;
+                if(blocked_processes.size() > 0)
+                {
+                   cout<<"Unblock "<< endl;
+
+                   bool stat=false;
+                   blocked_processes.at(0).setSTATUS(stat);   //prozess ist nicht mehr blockiert
+                   Process a=blocked_processes.at(0);           
+
+                   blocked_processes.erase(blocked_processes.begin() + 0);       //blockierter prozess wird gelöscht und zu bereiten gepusht
+                   ready_processes.push_back(a);
+                   //simulateProcess(ready_processes.at(0));
+                   cout<<"Blockierte Prozesse: "<<blocked_processes.size()<<endl;
+                } 
+                else
+                {
+                    cout << "Nothing to unblock" << endl;
+                }
+           
+               //über funktion realisieren?
+            }
             else
             {
                 write(STDOUT_FILENO, buffer, n);   //auf Konsole ausgeben
@@ -266,6 +387,9 @@ int main(int argc, char** argv)
             }
         }
     }
+    breakShell:
+        exit (EXIT_SUCCESS);
+    
     return 0;
 }
 
