@@ -25,6 +25,7 @@
 #include <cstring>
 #include <limits.h>
 #include <fstream>
+#include <sstream>
 #include <iostream>
 #include <iterator>
 #include <vector>
@@ -34,6 +35,16 @@
 #include <iomanip>
 
 using namespace std;
+
+template <typename Typ>
+void stringTo(string str, Typ &Wert)
+{
+    istringstream strin;
+    
+    strin.str(str);
+    strin >> Wert;
+}
+
 
 int takt = 0;
 int next_PID = 0;
@@ -142,19 +153,19 @@ void exec_Instruction(string instruction, Process * process)
     {
         case 'S': 
         {
-            int number = stoi( instruction.substr(2,string::npos) );
+            int number; stringTo(instruction,number);                      //stoi( instruction.substr(2,string::npos) );
             tmp_register = number;
             break; 
         }
         case 'A':
         {
-            int number = stoi( instruction.substr(2,string::npos) );
+            int number; stringTo(instruction, number);                     //stoi( instruction.substr(2,string::npos) );
             tmp_register += number;
             break; 
         }
         case 'D': 
         {
-            int number = stoi( instruction.substr(2,string::npos) );
+            int number; stringTo(instruction, number);                     //stoi( instruction.substr(2,string::npos) );
             tmp_register -= number;               
             break; 
         }
@@ -182,7 +193,7 @@ void exec_Instruction(string instruction, Process * process)
     process->SetProgramm_counter(process->programm_counter + 1);            
 }
 
-take_Step(Process * process)
+void take_Step(Process * process)
 {
     int programm_counter;
     programm_counter = process->programm_counter;
@@ -203,8 +214,8 @@ void FCFS_Scheduling()
         running_process = process;
         
         take_Step(process);
-        running_process = nullptr;
-        
+        //running_process = nullptr;
+        ++takt;
         
         //...
     }
@@ -244,33 +255,33 @@ void print_Report()
     print_Process_description();
     
 //    const vector<Prozess*> ready = processmanager->getReady();
-    for (auto & p: ready_processes)  //for (auto it = ready_processes.begin(); it != ready_processes.end(); ++it)
+    for (auto it = ready_processes.begin(); it != ready_processes.end(); ++it)
     {
-        print_Process(p);
+        print_Process(*it);
     }
     
     cout << endl << "BLOCKED PROCESSES: " << endl;
     print_Process_description();
     
 //    const vector<Prozess*> blocked = processmanager->getBlocked();        
-    for (auto & p: blocked_processes)
+    for (auto it = blocked_processes.begin(); it != blocked_processes.end(); ++it)
     {
-        print_Process(p);
+        print_Process(*it);
     }
     
     cout << endl << "FINISHED PROCESSES: " << endl;
     print_Process_description();
     
 //    const vector<Prozess*> finished = processmanager->getFinished();        
-    for (auto & p: finished_processes)
+    for (auto it = finished_processes.begin(); it != finished_processes.end(); ++it)
     {
-        print_Process(p);
+        print_Process(*it);
     }
     cout << "##############################################################\n";        
     exit(0);         
 }
 
-create_Report()
+void create_Report()
 {
     pid_t pid2;
     
@@ -296,10 +307,12 @@ create_Report()
 int main(int argc, char** argv) 
 {
     int n;
+    int bytes_read{0};
     int status{};
     int pipefd[2];
     pid_t pid, pid2;
     char buffer[600] = "";
+    string input;
     
     signal(SIGINT, handler);
     
@@ -314,81 +327,26 @@ int main(int argc, char** argv)
         perror ("fork-error");
         exit (EXIT_FAILURE);
     }
-    else if(pid == 0)   //Prozessmanager
-    {
-      
-        close(pipefd[1]);    //Schreibseite schließen
-        
-        n = read(pipefd[0], buffer, sizeof(buffer) - 1);    //aus der Pipe lesen
-        
-        string str(buffer);
-        
-        createProcess("init.txt", 0);
-        FCFS_Scheduling();
-
-
-        if(buffer == "Quit" || buffer == "quit" || buffer == "Q" || buffer == "q")
-        {
-            if((waitpid(pid,0,0)) < 0)   //Auf Child-Prozess warten
-            {
-                perror("waitpid-error");
-                exit (EXIT_FAILURE);
-            }
-            return(EXIT_SUCCESS);
-        }
-        else if (buffer == "report" || buffer == "Report" || buffer == "P" || buffer == "p")
-        {
-            create_Report();
-        }
-        else if(buffer == "M" || buffer == "m" || buffer == "mode" || buffer == "Mode")
-        {
-//                if (debug_mode)
-//                    debug_mode = false;
-//                else 
-//                    debug_mode = true;
-        }
-        else if (buffer == "s" || buffer == "S" || buffer == "step" || buffer == "Step")
-        {
-//                if (alg_choice == "1")
-//                {
-//                    takeStep_simpleScheduling();
-//                }
-//                else if (alg_choice == "2")
-//                {
-//                    takeStep_roundRobin();
-//                }
-        }
-        else if (buffer == "u" || buffer == "U" || buffer == "unblock" || buffer == "Unblock")
-        {
-//                blocked_processes.front().setRecentlyUnblocked(true);
-            blocked_processes.front()->SetBlocked(false);
-
-//                if (ready_processes.front().wasRecentlyUnblocked() )
-//                    ready.front()->setRecentlyUnblocked(false); //nur 1 prozess darf recently unblocked status haben (sonst funzt es halt nicht wie gewollt :D)
-
-            ready_processes.insert( ready_processes.begin(), blocked_processes.front() );
-            blocked_processes.erase( blocked_processes.begin() );
-
-        }         
-        else
-        {
-            write(STDOUT_FILENO, buffer, n);   //auf Konsole ausgeben
-            n = 0;
-            cout << endl;
-            exit (EXIT_SUCCESS);  
-        }
-    }
     else if (pid > 0)    //Kommandant (Parent-Prozess)
     {
         close(pipefd[0]);    //Leseseite schließen
+        
         while(true)
         {            
-            cout << "$ ";
+            cout << "$ " << flush;
             cin.getline(buffer,600,'\n');
             write(pipefd[1], buffer, sizeof(buffer) - 1);
             memset(buffer,'\0',600);    //Array leeren
+            wait(&status);
+//            kill(pid,SIGKILL);
 //            kill(pid, SIGUSR1);
-              
+//            cin >> input; cout << flush;
+//            bytes_read = input.length();
+//            if(write(pipefd[1], input.c_str(), bytes_read) != bytes_read)
+//            {
+//                cerr << "Parent: short write to child" << endl;
+//                exit(EXIT_FAILURE);
+//            }
         }
             
 //        if((waitpid(pid,0,0)) < 0)   //Auf Child-Prozess warten
@@ -397,5 +355,75 @@ int main(int argc, char** argv)
 //            exit (EXIT_FAILURE);
 //        }
     }
+    else if(pid == 0)   //Prozessmanager
+    {
+      
+        close(pipefd[1]);    //Schreibseite schließen
+        createProcess("init.txt", 0);
+        FCFS_Scheduling();
+        
+        while(true)
+        {
+            n = read(pipefd[0], buffer, sizeof(buffer) - 1);    //aus der Pipe lesen
+
+            string str(buffer);
+
+    //        createProcess("init.txt", 0);
+    //        FCFS_Scheduling();
+
+            if(str == "Quit" || str == "quit" || str == "Q" || str == "q")
+            {
+                if((waitpid(pid,0,0)) < 0)   //Auf Child-Prozess warten
+                {
+                    perror("waitpid-error");
+                    exit (EXIT_FAILURE);
+                }
+                return(EXIT_SUCCESS);
+            }
+            else if (str == "report" || str == "Report" || str == "P" || str == "p")
+            {
+                create_Report();
+            }
+            else if(str == "M" || str == "m" || str == "mode" || str == "Mode")
+            {
+    //                if (debug_mode)
+    //                    debug_mode = false;
+    //                else 
+    //                    debug_mode = true;
+            }
+            else if (str == "s" || str == "S" || str == "step" || str == "Step")
+            {
+                cout << "Taken 1 Step" << endl;
+                FCFS_Scheduling();
+//                if (alg_choice == "1")
+//                {
+//                    takeStep_simpleScheduling();
+//                }
+//                else if (alg_choice == "2")
+//                {
+//                    takeStep_roundRobin();
+//                }
+            }
+            else if (str == "u" || str == "U" || str == "unblock" || str == "Unblock")
+            {
+    //                blocked_processes.front().setRecentlyUnblocked(true);
+                blocked_processes.front()->SetBlocked(false);
+
+    //                if (ready_processes.front().wasRecentlyUnblocked() )
+    //                    ready.front()->setRecentlyUnblocked(false); //nur 1 prozess darf recently unblocked status haben (sonst funzt es halt nicht wie gewollt :D)
+
+                ready_processes.insert( ready_processes.begin(), blocked_processes.front() );
+                blocked_processes.erase( blocked_processes.begin() );
+
+            }         
+            else
+            {
+                write(STDOUT_FILENO, buffer, n);   //auf Konsole ausgeben
+                n = 0;
+                cout << endl;
+            }
+        }
+    }
+
     return 0;
 }
