@@ -120,8 +120,11 @@ void handler(int x)
 
 string readFile(string filename, int programm_counter)
 {
+    const char* file = filename.c_str();//new char[filename.size() + 1];
+    //copy(filename.begin(), filename.end(), file);
+    //file[filename.size()] = '\0';
     string str1, str2;
-    ifstream inFile(filename);
+    ifstream inFile(file);
     istream_iterator<string> ii(inFile);
     istream_iterator<string> eos;
     int line_counter = 0;
@@ -248,14 +251,14 @@ void print_Report()
 
     cout << endl << "RUNNING PROCESS: " << endl;
     print_Process_description();
-    if (running_process != nullptr)
+    if (running_process)// != nullptr)
         print_Process(running_process);
 
     cout << endl << "READY PROCESSES: " << endl;
     print_Process_description();
     
 //    const vector<Prozess*> ready = processmanager->getReady();
-    for (auto it = ready_processes.begin(); it != ready_processes.end(); ++it)
+    for (vector<Process*>::iterator it = ready_processes.begin(); it != ready_processes.end(); ++it)
     {
         print_Process(*it);
     }
@@ -264,7 +267,7 @@ void print_Report()
     print_Process_description();
     
 //    const vector<Prozess*> blocked = processmanager->getBlocked();        
-    for (auto it = blocked_processes.begin(); it != blocked_processes.end(); ++it)
+    for (vector<Process*>::iterator it = blocked_processes.begin(); it != blocked_processes.end(); ++it)
     {
         print_Process(*it);
     }
@@ -273,7 +276,7 @@ void print_Report()
     print_Process_description();
     
 //    const vector<Prozess*> finished = processmanager->getFinished();        
-    for (auto it = finished_processes.begin(); it != finished_processes.end(); ++it)
+    for (vector<Process*>::iterator it = finished_processes.begin(); it != finished_processes.end(); ++it)
     {
         print_Process(*it);
     }
