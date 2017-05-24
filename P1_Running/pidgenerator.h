@@ -5,21 +5,23 @@
  */
 
 /* 
- * File:   main.cpp
+ * File:   pidgenerator.h
  * Author: debian
  *
- * Created on May 24, 2017, 4:36 AM
+ * Created on May 24, 2017, 4:43 AM
  */
 
-#include "Commander.h"
+#ifndef PIDGENERATOR_H
+#define PIDGENERATOR_H
+
 #include "header.h"
 
-using namespace std;
+class pidgenerator{
+public:
+    static uint getPid();
+private:
+    static uint next_pid;
+};
 
-int main(int argc, char *argv[]){
-    
-    Commander commander;
-    commander.run();
-    
-    return 0;
-}
+#endif /* PIDGENERATOR_H */
+

@@ -1,28 +1,40 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
 
-#ifndef PROZESS_HPP
-#define	PROZESS_HPP
+/* 
+ * File:   Process.h
+ * Author: debian
+ *
+ * Created on May 24, 2017, 4:45 AM
+ */
 
-#include "headers.h"
-#include "PidGenerator.hpp"
+#ifndef PROCESS_H
+#define PROCESS_H
+
+#include "header.h"
+#include "pidgenerator.h"
 
 using namespace std;
 
-class Prozess{
+class Process{
 public:
-    Prozess(string file,uint parent_pid,uint time)
-    : ppid{parent_pid},int_register{0},program_counter{0},dateiname{file},creation_time{time},
+    Process(string file,uint parent_pid,uint time)
+    : ppid{parent_pid},int_register{0},pc{0},filename{file},creation_time{time},
             cpu_time_total{0},cpu_time_running{0},finish_time{0},is_finished{false},is_blocked{0},recently_unblocked{0}
     {
-        pid = PidGenerator::getId();
+        pid = pidgenerator::getPid();
     }
     int getIntRegister(){
         return int_register;
     }
-    int getProgramCounter(){
-        return program_counter;
+    int getPC(){
+        return pc;
     }
     string getFilename(){
-        return dateiname;
+        return filename;
     }
     int getPid(){
         return pid;
@@ -30,14 +42,27 @@ public:
     void setIntRegister(int newval){
         int_register = newval;
     }
-    void setProgramCounter(int newval){
-        program_counter=newval;
+    void setPC(int newval){
+        pc=newval;
     }
     uint getCreationTime(){
         return creation_time;
     }
     uint getPpid(){
         return ppid;
+    }
+    void setBlocked(bool blocked){
+        is_blocked= blocked;
+        cpu_time_running = 0;        
+    }
+    void setCpuTimeRunning(uint time){
+        cpu_time_running= time;
+    }
+    void setRecentlyUnblocked(bool var){
+        recently_unblocked= var;
+    }
+    bool wasRecentlyUnblocked(){
+        return recently_unblocked;
     }
     uint getTotalCpuTime(){
         return cpu_time_total;
@@ -63,34 +88,20 @@ public:
     bool isBlocked(){
         return is_blocked;
     }
-    void setBlocked(bool blocked){
-        is_blocked= blocked;
-        cpu_time_running = 0;        
-    }
-    void setCpuTimeRunning(uint time){
-        cpu_time_running= time;
-    }
-    void setRecentlyUnblocked(bool var){
-        recently_unblocked= var;
-    }
-    bool wasRecentlyUnblocked(){
-        return recently_unblocked;
-    }
 private:
     uint pid;
     uint ppid;
     int int_register;
-    int program_counter;
-    string dateiname;
-    uint creation_time; //takt wo dieser prozess erstellt wurde
-    uint cpu_time_total; // wieviele takte hat cpu diesem prozess gewidmet?
-    uint cpu_time_running;
+    int pc;
+    string filename;
     uint finish_time;
     bool is_finished;
     bool is_blocked;
     bool recently_unblocked;
+    uint creation_time;
+    uint cpu_time_total;
+    uint cpu_time_running;
 };
 
-
-#endif	/* PROZESS_HPP */
+#endif /* PROCESS_H */
 

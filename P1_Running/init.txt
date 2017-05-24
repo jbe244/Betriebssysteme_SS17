@@ -2,7 +2,7 @@ S 20
 A 1
 A 1
 B
-R prog1.txt
+R file_a.txt
 A 1
 A 1
 B

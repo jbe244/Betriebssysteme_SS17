@@ -1,30 +1,36 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
 
-#include "Prozessmanager.hpp"
+
+#include "Processmanager.h"
 #include <iterator>
 
 
-Prozessmanager* Prozessmanager::THIS_OBJECT {nullptr};
+Processmanager* Processmanager::THIS_OBJECT {nullptr};
 
-Prozessmanager::Prozessmanager(int pipe_fd[2],string scheduling_choice)
-: pipe_to_kommandant {pipe_fd}, reporter_pid{}, running{nullptr},debug_mode{true},tact_counter{0},alg_choice{scheduling_choice}
+Processmanager::Processmanager(int pipe_fd[2],string scheduling)
+: kommandant_pipe {pipe_fd}, reporter_pid{}, running{nullptr},debug_mode{true},tact_counter{0},alg_choice{scheduling}
 {
     THIS_OBJECT = this;
-    close( pipe_to_kommandant[1] );
+    close( kommandant_pipe[1] );
     signal(SIGUSR1,getCommand_SignalHandler);
 }
-Prozessmanager* Prozessmanager::getTHIS(){
+Processmanager* Processmanager::getTHIS(){
     return THIS_OBJECT;
 }   
-void Prozessmanager::getCommand_SignalHandler(int signo) { //wird von kommandant aufgerufen, wenn neuer eintrag in der pipe
+void Processmanager::getCommand_SignalHandler(int signo) { //wird von kommandant aufgerufen, wenn neuer eintrag in der pipe
     uint buffsize=200;
     char output [buffsize];
-    Prozessmanager * manager = getTHIS();
-    int * pipe_to_kommandant = manager->getPipe();
-    read (pipe_to_kommandant[0], output , buffsize); //eingaben werden aktuell gebuffert -> report mehrfach -> wird nach und nach ausgeführt      
-    manager->handleCommand (output);     
+    Processmanager * processmanager = getTHIS();
+    int * kommandant_pipe = processmanager->getPipe();
+    read (kommandant_pipe[0], output , buffsize); //eingaben werden aktuell gebuffert -> report mehrfach -> wird nach und nach ausgeführt      
+    processmanager->handleCommand (output);     
 } 
 
-void Prozessmanager::createReport(){
+void Processmanager::createReport(){
     int reporter_status {};
     int result = waitpid(reporter_pid, &reporter_status, WNOHANG);
     if ( reporter_pid == 0 || (reporter_pid != 0 && result != 0 && result != -1) ){ 
@@ -32,21 +38,21 @@ void Prozessmanager::createReport(){
         if (fork_pid > 0){
             reporter_pid = fork_pid;
         }
-        else if (fork_pid == 0){ //reporter prozess
+        else if (fork_pid == 0){ //reporter process
             Reporter reporter (this);
             reporter.printReport();
         }             
     }    
 }
 
-void Prozessmanager::handleCommand(string command) {
+void Processmanager::handleCommand(string command) {
     if (command == "quit" || command == "Quit" || command == "q" || command == "Q"){
         int status {};
         wait(&status);
         
-        cout << "Durchschnittliche Durchlaufzeit: ";
+        cout << "Average Runtime: ";
         if (finished.size() == 0){
-            cout << "Nicht genügend Daten\n";
+            cout << "Too few data\n";
         }
         else {
             double durchschnittliche_durchlaufzeit {};
@@ -55,7 +61,7 @@ void Prozessmanager::handleCommand(string command) {
             }
             cout << ( durchschnittliche_durchlaufzeit /= finished.size() ) << " (n = "<<finished.size() << ")" << endl;
         }
-        exit(0);  //beendet den prozess ( nicht nur diese methode )
+        exit(0);  //beendet den process ( nicht nur diese methode )
     }
     
     else if (command == "report" || command == "Report" || command == "P" || command == "p" || command == "print" || command == "Print"){
@@ -83,23 +89,23 @@ void Prozessmanager::handleCommand(string command) {
         blocked.front()->setBlocked(false);
         
         if (ready.front()->wasRecentlyUnblocked() )
-            ready.front()->setRecentlyUnblocked(false); //nur 1 prozess darf recently unblocked status haben (sonst funzt es halt nicht wie gewollt :D)
+            ready.front()->setRecentlyUnblocked(false); //nur 1 process darf recently unblocked status haben (sonst funzt es halt nicht wie gewollt :D)
         
         ready.insert ( ready.begin(), blocked.front() );
         blocked.erase( blocked.begin() );
         
     }   
 }  
-void Prozessmanager::run(){
+void Processmanager::run(){
     createProcess ("init.txt",0);
     scheduleProcesses();
 }
 
-void Prozessmanager::takeStep_roundRobin() {
+void Processmanager::takeStep_roundRobin() {
     
     uint quantum = 2;
     if(ready.size() > 0){
-        Prozess * toStep { ready.front() };
+        Process * toStep { ready.front() };
         ready.erase( find(ready.begin(),ready.end(),toStep) );      
         running= toStep;        
         
@@ -126,9 +132,9 @@ void Prozessmanager::takeStep_roundRobin() {
     }
 }
 
-void Prozessmanager::takeStep_simpleScheduling() {
+void Processmanager::takeStep_simpleScheduling() {
     if(ready.size() > 0){
-        Prozess * toStep { ready.front() };
+        Process * toStep { ready.front() };
         ready.erase( find(ready.begin(),ready.end(),toStep) );      
         running= toStep;        
         
@@ -146,7 +152,7 @@ void Prozessmanager::takeStep_simpleScheduling() {
     }
 }
 
-void Prozessmanager::scheduleProcesses(){ //getestet
+void Processmanager::scheduleProcesses(){ //getestet
     while(true){
         if (!debug_mode){
             if (alg_choice == "1"){
@@ -158,27 +164,27 @@ void Prozessmanager::scheduleProcesses(){ //getestet
         }
     }
 }
-int* Prozessmanager::getPipe(){
-    return pipe_to_kommandant;
+int* Processmanager::getPipe(){
+    return kommandant_pipe;
 }
-void Prozessmanager::createProcess ( string dateiname,uint ppid){
-    ready.push_back( new Prozess(dateiname,ppid,tact_counter) );
+void Processmanager::createProcess ( string dateiname,uint ppid){
+    ready.push_back( new Process(dateiname,ppid,tact_counter) );
 }
-void Prozessmanager::stepProcess ( Prozess* process){
+void Processmanager::stepProcess ( Process* process){
 
     sleep(1); //step soll 1 sekunde dauern      
     int_register = process->getIntRegister();
-    program_counter = process->getProgramCounter();
+    pc = process->getPC();
     string file = process->getFilename();
     
-    string order = getInstructionFromFile(file,program_counter);
+    string order = getInstructionFromFile(file,pc);
     process->incrementCpuTime();
     executeInstruction(order,process);
     process->setRecentlyUnblocked(false);
     
 }
 
-void Prozessmanager::executeInstruction(string instruction, Prozess* process){
+void Processmanager::executeInstruction(string instruction, Process* process){
     switch (instruction.at(0)){
         case 'S': {
             int number = stoi( instruction.substr(2,string::npos) );
@@ -211,9 +217,9 @@ void Prozessmanager::executeInstruction(string instruction, Prozess* process){
         }
     }
     process->setIntRegister(int_register);
-    process->setProgramCounter(program_counter+1);            
+    process->setPC(pc+1);            
 }
-string Prozessmanager::getInstructionFromFile(string filename,int pcounter){
+string Processmanager::getInstructionFromFile(string filename,int pcounter){
     ifstream file (filename);
     string line;
     int line_counter {}; 
@@ -232,19 +238,19 @@ string Prozessmanager::getInstructionFromFile(string filename,int pcounter){
     }
     return "";
 }
-const vector<Prozess*>& Prozessmanager::getReady(){
+const vector<Process*>& Processmanager::getReady(){
     return ready;
 }
-const vector<Prozess*>& Prozessmanager::getBlocked(){
+const vector<Process*>& Processmanager::getBlocked(){
     return blocked;
 }
-const vector<Prozess*>& Prozessmanager::getFinished(){
+const vector<Process*>& Processmanager::getFinished(){
     return finished;
 }
-Prozess * Prozessmanager::getRunning(){
+Process * Processmanager::getRunning(){
     return running;
 }
 
-uint Prozessmanager::getCurrentTactNumber(){
+uint Processmanager::getCurrentTactNumber(){
     return tact_counter;
 }
