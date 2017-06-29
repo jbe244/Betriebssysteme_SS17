@@ -30,7 +30,7 @@ int main(int argc, char** argv)
 
 	/*	Generates Random Numbers */
 	random_device rd;
-	mt19937 gen(rd());
+	mt19937 gen(rd()); // random generator of 32-bit numbers with start size 19937 bits
 
 	/*Pick a random adress*/
 	int rand_command;
@@ -45,7 +45,7 @@ int main(int argc, char** argv)
 
 	/**	CPU picks a command	*/
 
-	discrete_distribution<> stochastic_distribution({ 3, 2, 1 });
+	discrete_distribution<> stochastic_distribution({ 3, 2, 1 }); // For weight - Random Number distribution produces integer values with predefined probability of being processed
 	for (size_t i = 0; i < 1500; i++)
 	{       
 		rand_command = stochastic_distribution(gen);

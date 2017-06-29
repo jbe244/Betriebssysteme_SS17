@@ -167,6 +167,11 @@ void CPU::fixPageError() {
 
         /**  NRU Seitenersetzungsalgo 
          ===================================   */ 
+
+        /** Das Betriebssystem teilt alle Seiten in 4 Kategorien/Klassen ein (s.o).
+        Ausgewählt (zum Auslagern) wird eine zufällige Seite aus der kleinsten nicht leeren Klasse bzgl. der o.g. Kategorie.
+        */
+
         for (Process& proc : m_processes) {
             for (Page & page : proc.getVirtualMemory()) {
               
@@ -177,6 +182,12 @@ void CPU::fixPageError() {
 
         /**  FIFO Seitenersetzungsalgo   
          ===================================    */
+
+        /** Die Idee ist, die Seiten als FIFO Speicher (verkettete Liste mit beschränkter Größe k) von aktuell im Speicher befindlichen Seiten zu verwalten, wobei die älteste Seite am Anfang steht.
+        Verfahren:
+        1. Bei Seitenfehler wird die Seite am Kopf der Liste (d.h. die älteste) entfernt 
+        2. die eingelagerte Seite wird am Ende eingefügt. */
+
 //                for (Process& proc : m_processes) {
 //                    for (Page & page : proc.getVirtualMemory()) {
 //                        bool wasFound = os.substitutePageByFIFO(page.getContent(), proc.getPageTable(), m_current_process->getPageTable(), ram);
@@ -219,7 +230,7 @@ void CPU::readOrWriteToRAM(const bool& isReading, const size_t& index) {
     }
 }
 
-/*Statistiken fuer den Laborbericht*/
+/*Statistiken fuer Bericht*/
 void CPU::print() const {
     cout << dec << "\n______________________________________\n";
     cout << "______________________________________\n\n";
